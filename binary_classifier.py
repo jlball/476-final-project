@@ -18,11 +18,13 @@ print(type(data))
 train_ldr = DataLoader(data, batch_size=60, shuffle=True)
 test_ldr = DataLoader(data, shuffle=False)
 
-input_dim = res * res * 3
+input_dim = 53824
 layer1 = 4000
 layer2 = 1000
 layer3 = 200
 out_dim = 2
+filter1 = 16
+filter2 = 16
 
 def compute_accuracy():
     net.eval()
@@ -43,6 +45,12 @@ def compute_accuracy():
 
 
 net = Sequential(
+    Conv2d(3, filter1, kernel_size=4, stride=1, padding=0),
+    ReLU(),
+    #MaxPool2d(kernel_size=2, stride=2),
+    Conv2d(filter1, filter2, kernel_size=4, stride=1, padding=0),
+    ReLU(),
+    #MaxPool2d(kernel_size=2, stride=2),
     Flatten(),
     Linear(input_dim, layer1),
     ReLU(),
@@ -63,7 +71,7 @@ net.cuda()
 
 
 #Number of epochs
-epochs = 10
+epochs = 20
 
 #Loss function
 loss = CrossEntropyLoss()
