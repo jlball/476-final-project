@@ -1,24 +1,24 @@
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
-from torch.nn import Sequential, ReLU, Linear, Flatten, CrossEntropyLoss, Conv2d
+from torch.nn import Sequential, ReLU, Linear, Flatten, CrossEntropyLoss, Conv2d, MaxPool2d
 from torch.optim import Adam
 from torch import randn, no_grad, set_grad_enabled
 
-res = 64
+res = 85
 
 trans = transforms.Compose([
     transforms.Resize((res, res)),
     transforms.ToTensor()
 ])
 
-data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/images", transform=trans)
+train_data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/images", transform=trans)
+test_data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/test_images", transform=trans)
 
-print(type(data))
-train_ldr = DataLoader(data, batch_size=60, shuffle=True)
-test_ldr = DataLoader(data, shuffle=False)
+train_ldr = DataLoader(train_data, batch_size=120, shuffle=True)
+test_ldr = DataLoader(test_data, shuffle=False)
 
-input_dim = 53824
+input_dim = 21904
 layer1 = 4000
 layer2 = 1000
 layer3 = 200
@@ -45,18 +45,18 @@ def compute_accuracy():
 
 
 net = Sequential(
-    Conv2d(3, filter1, kernel_size=4, stride=1, padding=0),
+    Conv2d(3, filter1, kernel_size=5, stride=1, padding=0),
     ReLU(),
-    #MaxPool2d(kernel_size=2, stride=2),
+    MaxPool2d(kernel_size=2, stride=2),
     Conv2d(filter1, filter2, kernel_size=4, stride=1, padding=0),
     ReLU(),
     #MaxPool2d(kernel_size=2, stride=2),
     Flatten(),
-    Linear(input_dim, layer1),
-    ReLU(),
-    Linear(layer1, layer2),
-    ReLU(),
-    Linear(layer2, layer3),
+    Linear(input_dim, layer3),
+    #ReLU(),
+    #Linear(layer1, layer3),
+    #ReLU(),
+    #Linear(layer2, layer3),
     ReLU(),
     Linear(layer3, out_dim),
 )
@@ -69,9 +69,8 @@ for layer in net:
 #push model to GPU
 net.cuda()
 
-
 #Number of epochs
-epochs = 20
+epochs = 10
 
 #Loss function
 loss = CrossEntropyLoss()
@@ -94,5 +93,5 @@ for epoch in range(0, epochs):
         adam.step()
 
         print("loss:", loss_value.item())
+    compute_accuracy()
 
-compute_accuracy()
