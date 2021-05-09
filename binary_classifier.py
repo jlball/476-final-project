@@ -8,17 +8,19 @@ from torch import randn, no_grad, set_grad_enabled
 res = 85
 
 trans = transforms.Compose([
-    transforms.Resize((res, res)),
+    transforms.Resize((128, res)),
     transforms.ToTensor()
 ])
 
 train_data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/images", transform=trans)
 test_data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/test_images", transform=trans)
 
+
 train_ldr = DataLoader(train_data, batch_size=120, shuffle=True)
 test_ldr = DataLoader(test_data, shuffle=False)
+acc_train_ldr = DataLoader(train_data)
 
-input_dim = 21904
+input_dim = 37440
 layer1 = 4000
 layer2 = 1000
 layer3 = 200
@@ -26,51 +28,55 @@ out_dim = 2
 filter1 = 16
 filter2 = 16
 
-def compute_accuracy():
+def compute_accuracy(onTrainingData=False):
     net.eval()
     no_grad()
     num_correct = 0
     counter = 0
-    for (index, data) in enumerate(test_ldr):
-            pred = net(data[0].cuda())
-            pred = pred.argmax()
-            counter += 1
-            if pred.item() == data[1]:
-                num_correct += 1
+    if onTrainingData:
+        ldr = acc_train_ldr
+    else:
+        ldr = test_ldr
+    for (index, data) in enumerate(ldr):
+                pred = net(data[0].cuda())
+                pred = pred.argmax()
+                counter += 1
+                if pred.item() == data[1]:
+                    num_correct += 1
 
-    accuracy = num_correct / (test_ldr.__len__())
+    accuracy = num_correct / (ldr.__len__())
     print("Accuracy: ", accuracy)
     set_grad_enabled(True)
     net.train()
 
 
 net = Sequential(
-    Conv2d(3, filter1, kernel_size=5, stride=1, padding=0),
+    Conv2d(3, filter1, kernel_size=2, stride=1, padding=0),
     ReLU(),
     MaxPool2d(kernel_size=2, stride=2),
     Conv2d(filter1, filter2, kernel_size=4, stride=1, padding=0),
     ReLU(),
     #MaxPool2d(kernel_size=2, stride=2),
     Flatten(),
-    Linear(input_dim, layer3),
-    #ReLU(),
-    #Linear(layer1, layer3),
-    #ReLU(),
-    #Linear(layer2, layer3),
+    Linear(input_dim, layer1),
+    ReLU(),
+    Linear(layer1, layer2),
+    ReLU(),
+    Linear(layer2, layer3),
     ReLU(),
     Linear(layer3, out_dim),
 )
 
-x = randn(1, 3, res, res)
+x = randn(1, 3, 128, res)
 for layer in net:
-    x = layer(x)
-    print(x.size())
+     x = layer(x)
+     print(x.size())
 
 #push model to GPU
 net.cuda()
 
 #Number of epochs
-epochs = 10
+epochs = 25
 
 #Loss function
 loss = CrossEntropyLoss()
@@ -94,4 +100,4 @@ for epoch in range(0, epochs):
 
         print("loss:", loss_value.item())
     compute_accuracy()
-
+compute_accuracy(onTrainingData=True)
