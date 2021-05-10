@@ -4,6 +4,9 @@ from torchvision.transforms import transforms
 from torch.nn import Sequential, ReLU, Linear, Flatten, CrossEntropyLoss, Conv2d, MaxPool2d
 from torch.optim import Adam
 from torch import randn, no_grad, set_grad_enabled
+from DCGAN_DataBooster import BoostImageDataset
+
+BoostImageDataset()
 
 res = 85
 
