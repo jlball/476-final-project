@@ -70,6 +70,14 @@ class DiscriminatorNet (nn.Module):
     def forward(self, x):
         return self.main(x)
 
+#
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
 
 
 def BoostImageDataset(data_ldr, epochs, num_of_imgs):
@@ -81,6 +89,10 @@ def BoostImageDataset(data_ldr, epochs, num_of_imgs):
     gen_input_size = 100
     Generator = GeneratorNet(gen_input_size).to(device)
     Discriminator = DiscriminatorNet().to(device)
+
+    #Initialize the weights of each model normally
+    Discriminator.apply(weights_init)
+    Generator.apply(weights_init)
 
     #setup binary cross entropy loss function
     loss = nn.BCELoss()
@@ -97,6 +109,9 @@ def BoostImageDataset(data_ldr, epochs, num_of_imgs):
     DiscriminatorOpt = optim.Adam(Discriminator.parameters(), lr=lr, betas=(beta1, 0.999))
     GeneratorOpt = optim.Adam(Generator.parameters(), lr=lr, betas=(beta1, 0.999))
 
+
+    G_losses = []
+    D_losses = []
     print("======BEGIN TRAINING DataBoostDCGAN======")
     for epoch in range(epochs):
         print("EPOCH: ", epoch)
@@ -143,10 +158,23 @@ def BoostImageDataset(data_ldr, epochs, num_of_imgs):
             Generator_loss.backward()
             GeneratorOpt.step()
 
+            G_losses.append(Generator_loss.item())
+            D_losses.append(Discriminator_loss_total.item())
+
             if index % 50 == 0:
                 print("Loss:", Discriminator_loss_fake.item(), Discriminator_loss_real.item())
 
     torch.no_grad()
+
+    plt.figure(figsize=(10,5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(G_losses,label="G")
+    plt.plot(D_losses,label="D")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()  
+
     return Generator(torch.randn(num_of_imgs, gen_input_size, 1, 1, device=device)).detach().cpu()
 
 

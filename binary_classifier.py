@@ -5,8 +5,7 @@ from torch.nn import Sequential, ReLU, Linear, Flatten, CrossEntropyLoss, Conv2d
 from torch.optim import Adam
 from torch import randn, no_grad, set_grad_enabled
 from DCGAN_DataBooster import BoostImageDataset
-
-BoostImageDataset()
+import matplotlib.pyplot as plt
 
 res = 85
 
@@ -51,8 +50,9 @@ def compute_accuracy(onTrainingData=False):
     print("Accuracy: ", accuracy)
     set_grad_enabled(True)
     net.train()
+    return accuracy
 
-
+#Define the binary classifier network
 net = Sequential(
     Conv2d(3, filter1, kernel_size=2, stride=1, padding=0),
     ReLU(),
@@ -88,6 +88,8 @@ learn_rate = 0.001
 #Setting up the Adam optimizer
 adam = Adam(net.parameters(), lr = learn_rate)
 
+loss_plot = []
+acc_plot = []
 #Train the model
 for epoch in range(0, epochs):
     print ("START EPOCH: ", epoch + 1)
@@ -102,5 +104,20 @@ for epoch in range(0, epochs):
         adam.step()
 
         print("loss:", loss_value.item())
-    compute_accuracy()
+        loss_plot.append(loss_value.item())
+    acc_plot.append(compute_accuracy())
 compute_accuracy(onTrainingData=True)
+
+plt.figure(figsize=(10,5))
+plt.title("Binary Classifier Loss over Training")
+plt.plot(loss_plot)
+plt.xlabel("iterations")
+plt.ylabel("Loss")
+plt.show()  
+
+plt.figure(figsize=(10,5))
+plt.title("Binary Classifier Accuracy over Training")
+plt.plot(acc_plot)
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.show()  
