@@ -1,5 +1,5 @@
 from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, ConcatDataset
 from torchvision.transforms import transforms
 import torchvision.utils as vutils
 from torch.nn import Sequential, ReLU, Linear, Flatten, CrossEntropyLoss, Conv2d, MaxPool2d
@@ -26,6 +26,10 @@ class DCGANImageDataset (Dataset):
         sample = (image, label)
         return sample
 
+# Datset class for combining two datasets
+# TAKEN FROM PYTORCH FORUMS:
+# https://discuss.pytorch.org/t/combine-concat-dataset-instances/1184
+
 #Directories for images to train DCGANs with
 dataroot_raw = "/home/jlball/Desktop/Machine Learning/Final Project/images_gan/raw"
 dataroot_processed = "/home/jlball/Desktop/Machine Learning/Final Project/images_gan/processed"
@@ -49,7 +53,7 @@ raw_ldr = DataLoader(dataset_raw, batch_size=120, shuffle=True)
 processed_ldr = DataLoader(dataset_processed, batch_size=120, shuffle=True)
 
 #Desired number of images to generate from the DCGANs
-num_of_images = 5000
+num_of_images = 3000
 
 #Number of epochs for DCGANs to be trained with
 num_of_epochs = 200
@@ -59,8 +63,7 @@ raw_imgs = BoostImageDataset(raw_ldr, num_of_epochs, num_of_images)
 processed_imgs = BoostImageDataset(processed_ldr, num_of_epochs, num_of_images)
 
 #Load DCGAN generated images into a single dataset, create a dataloader
-total_dataset = DCGANImageDataset(cat((raw_imgs, processed_imgs), 0), num_of_images)
-total_ldr = DataLoader(total_dataset, batch_size = 500, shuffle = True)
+dataset_fake = DCGANImageDataset(cat((raw_imgs, processed_imgs), 0), num_of_images)
 
 #generate g8x8 grids of generated images from DCGANS
 raw_imgs = vutils.make_grid(raw_imgs[0:64], padding=2, normalize=True)
@@ -74,9 +77,14 @@ plt.show()
 
 #Load real images
 train_data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/images", transform=trans)
-train_ldr = total_ldr
+test_data = ImageFolder("/home/jlball/Desktop/Machine Learning/Final Project/test_images", transform=trans)
 
-acc_train_ldr = DataLoader(train_data)
+train_ldr = DataLoader(train_data)
+test_ldr = DataLoader(test_data, shuffle=False)
+
+#Concatenate real and generated image datasets using ConcatDataset function:
+total_dataset = ConcatDataset([dataset_fake, train_data])
+total_ldr = DataLoader(total_dataset, batch_size=500)
 
 #Specify shape / dimension of binary classifier network
 input_dim = 12544
@@ -95,7 +103,7 @@ def compute_accuracy():
     no_grad()
     num_correct = 0
     counter = 0
-    ldr = acc_train_ldr
+    ldr = train_ldr
     #iterate through dataset, evalute and then compare with label
     for (index, data) in enumerate(ldr):
                 pred = net(data[0].cuda())
@@ -138,7 +146,7 @@ net = Sequential(
 net.cuda()
 
 #Number of epochs
-epochs = 4
+epochs = 8
 
 #Loss function
 loss = CrossEntropyLoss()
@@ -154,7 +162,7 @@ acc_plot = []
 #Train the model
 for epoch in range(0, epochs):
     print ("START EPOCH: ", epoch + 1)
-    for (batch_idx, batch) in enumerate(train_ldr):
+    for (batch_idx, batch) in enumerate(total_ldr):
         y = net(batch[0].cuda())
         loss_value = loss(y, batch[1].cuda())
 
